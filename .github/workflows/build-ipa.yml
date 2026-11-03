@@ -1,0 +1,43 @@
+name: 构建 iOS 应用包
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: ubuntu-22.04
+    env:
+      CI: "true"
+      BUILD_VERSION: "1.0.0"
+
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential fakeroot rsync curl perl zip unzip git libxml2 libtinfo6 xz-utils
+
+      - name: 安装 Theos 与 iOS 工具链
+        run: |
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+
+      - name: 抓 FFmpeg iOS 静态库
+        run: bash scripts/fetch-ffmpeg.sh
+
+      - name: 编译
+        run: make FINAL=1 -j"$(nproc)"
+
+      - name: 打包 ipa
+        run: bash scripts/make-ipa.sh
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: 格式大师-iOS14-未签名ipa
+          path: build/*.ipa
+          if-no-files-found: error
