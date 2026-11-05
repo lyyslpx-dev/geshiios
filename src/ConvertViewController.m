@@ -249,7 +249,7 @@
     req.inputPath = self.inputPath;
     NSString *base = [self.inputPath.lastPathComponent stringByDeletingPathExtension];
     NSString *outName = [NSString stringWithFormat:@"%@_%u.%@", base,
-                         (unsigned)(NSDate.date.timeIntervalSince1970 % 100000),
+                         (unsigned)((long long)NSDate.date.timeIntervalSince1970 % 100000),
                          self.preset.ext];
     self.outputPath = [[FFEngine outputDir] stringByAppendingPathComponent:outName];
     req.outputPath = self.outputPath;

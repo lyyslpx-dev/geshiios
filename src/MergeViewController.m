@@ -80,7 +80,7 @@
     [b setTitle:t forState:UIControlStateNormal];
     b.backgroundColor = UIColor.secondarySystemBackgroundColor;
     b.layer.cornerRadius = 10;
-    [b heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    [b.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     return b;
 }
 
@@ -141,7 +141,7 @@
     self.statusLabel.text = @"合并中…";
 
     NSString *out = [[FFEngine outputDir] stringByAppendingPathComponent:
-        [NSString stringWithFormat:@"merged_%u.mp4", (unsigned)(NSDate.date.timeIntervalSince1970 % 100000)]];
+        [NSString stringWithFormat:@"merged_%u.mp4", (unsigned)((long long)NSDate.date.timeIntervalSince1970 % 100000)]];
     self.outputPath = out;
 
     __block volatile BOOL cancel = NO;

@@ -884,7 +884,7 @@ cleanup:
         [s appendFormat:@"file '%@'\n", esc];
     }
     NSString *list = [[self tempDir] stringByAppendingPathComponent:
-        [NSString stringWithFormat:@"merge_%u.ffconcat", (unsigned)(NSDate.date.timeIntervalSince1970 % 1000000)]];
+        [NSString stringWithFormat:@"merge_%u.ffconcat", (unsigned)((long long)NSDate.date.timeIntervalSince1970 % 1000000)]];
     NSError *werr = nil;
     if (![s writeToFile:list atomically:YES encoding:NSUTF8StringEncoding error:&werr]) {
         if (error) *error = werr; return nil;

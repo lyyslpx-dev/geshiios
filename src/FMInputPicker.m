@@ -3,9 +3,7 @@
 #import "FFEngine.h"
 #import <Photos/Photos.h>
 #import <PhotosUI/PhotosUI.h>
-#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <ImageIO/ImageIO.h>
-#import <MobileCoreServices/MobileCoreServices.h>
 
 @interface FMInputPicker () <PHPickerViewControllerDelegate, UIDocumentPickerDelegate>
 @property (nonatomic, copy) FMPickCompletion completion;
@@ -84,10 +82,10 @@ static NSMutableArray<FMInputPicker *> *_FMPickerKeepalive = nil;
     NSItemProvider *provider = results.firstObject.itemProvider;
     NSString *type = nil;
     for (NSString *tid in provider.registeredTypeIdentifiers) {
-        if ([tid isEqualToString:(__bridge NSString *)kUTTypeMovie] ||
-            [tid isEqualToString:(__bridge NSString *)kUTTypeMPEG4] ||
+        if ([tid isEqualToString:@"public.movie"] ||
+            [tid isEqualToString:@"public.mpeg-4"] ||
             [tid isEqualToString:@"public.mpeg-2-transport-stream"] ||
-            [tid isEqualToString:(__bridge NSString *)kUTTypeImage] ||
+            [tid isEqualToString:@"public.image"] ||
             [tid isEqualToString:@"public.heic"] ||
             [tid isEqualToString:@"public.audio"]) { type = tid; break; }
     }
@@ -139,18 +137,13 @@ static NSMutableArray<FMInputPicker *> *_FMPickerKeepalive = nil;
 
 - (void)openFiles:(FFFormatKind)kind {
     (void)kind;
-    NSArray *types = @[];
-    if (@available(iOS 14.0, *)) {
-        // 全格式诉求：放宽到 public.data，避免 MKV/FLV/AVI 等被灰掉选不中
-        types = @[UTType.data];
-    }
-    UIDocumentPickerViewController *dp;
-    if (@available(iOS 14.0, *)) {
-        dp = [[UIDocumentPickerViewController alloc] initWithContentTypes:types asCopy:YES];
-    } else {
-        dp = [[UIDocumentPickerViewController alloc]
-              initWithDocumentTypes:@[(__bridge NSString *)kUTTypeData] inMode:UIDocumentPickerModeImport];
-    }
+    // 统一用 iOS 11+ 的 UTI 字符串接口：Theos SDK 的 UIKit 头不含 iOS 14 的
+    // 新版文档选择器初始化方法，UTType 类属性也不是合法的 ObjC 写法。
+    // public.data 放开到全部文件，避免 MKV/FLV/AVI 等被灰掉选不中。
+    NSArray<NSString *> *types = @[@"public.data", @"public.movie",
+                                   @"public.audio", @"public.image"];
+    UIDocumentPickerViewController *dp = [[UIDocumentPickerViewController alloc]
+        initWithDocumentTypes:types inMode:UIDocumentPickerModeImport];
     dp.delegate = self;
     dp.allowsMultipleSelection = NO;
     [self.host presentViewController:dp animated:YES completion:nil];

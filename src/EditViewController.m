@@ -95,7 +95,7 @@
     [b setTitle:t forState:UIControlStateNormal];
     b.backgroundColor = UIColor.secondarySystemBackgroundColor;
     b.layer.cornerRadius = 10;
-    [b heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
+    [b.heightAnchor constraintGreaterThanOrEqualToConstant:44].active = YES;
     return b;
 }
 
@@ -113,7 +113,7 @@
     s.minimumValue = 0;
     s.maximumValue = 1;
     [s addTarget:self action:sel forControlEvents:UIControlEventValueChanged];
-    [s heightAnchor constraintGreaterThanOrEqualToConstant:32].active = YES;
+    [s.heightAnchor constraintGreaterThanOrEqualToConstant:32].active = YES;
     return s;
 }
 
@@ -309,7 +309,7 @@
     NSString *base = [self.inputPath.lastPathComponent stringByDeletingPathExtension];
     self.outputPath = [[FFEngine outputDir] stringByAppendingPathComponent:
         [NSString stringWithFormat:@"%@_cut_%u.%@", base,
-         (unsigned)(NSDate.date.timeIntervalSince1970 % 100000), ext]];
+         (unsigned)((long long)NSDate.date.timeIntervalSince1970 % 100000), ext]];
     req.outputPath = self.outputPath;
     req.muxerName = ext;
     req.videoCodec = self.asGif ? @"gif" : @"h264_videotoolbox,mpeg4";
