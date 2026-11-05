@@ -25,7 +25,7 @@
     self.table.dataSource = self;
     self.table.delegate = self;
     self.table.rowHeight = 88;
-    if (@available(iOS 15.0, *)) self.table.sectionHeaderTopPadding = 0;
+    if ([NSProcessInfo processInfo].operatingSystemVersion.majorVersion >= 15) self.table.sectionHeaderTopPadding = 0;
     [self.view addSubview:self.table];
 
     [[NSNotificationCenter defaultCenter] addObserver:self

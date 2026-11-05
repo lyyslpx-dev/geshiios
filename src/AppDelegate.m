@@ -10,7 +10,7 @@
     self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
     RootViewController *root = [RootViewController new];
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:root];
-    if (@available(iOS 15.0, *)) {
+    if ([NSProcessInfo processInfo].operatingSystemVersion.majorVersion >= 15) {
         UINavigationBarAppearance *ap = [UINavigationBarAppearance new];
         [ap configureWithOpaqueBackground];
         nav.navigationBar.standardAppearance = ap;
