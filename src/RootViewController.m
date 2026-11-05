@@ -25,7 +25,16 @@
     self.table.dataSource = self;
     self.table.delegate = self;
     self.table.rowHeight = 88;
-    if ([NSProcessInfo processInfo].operatingSystemVersion.majorVersion >= 15) self.table.sectionHeaderTopPadding = 0;
+    // iOS 15 起 UITableView 会给 section header 加额外顶部间距，这里清零。
+    // 不能用 @available：Theos 的 clang-11 会生成 ___isOSVersionAtLeast 外部引用，
+    //   而工具链未链接 compiler-rt，会在链接期报 undefined symbols。
+    // 也不能直接访问该属性：部署目标是 iOS 14，会被
+    //   -Werror,-Wunguarded-availability-new 判为错误。
+    // 改用运行时探测 + KVC：两个限制一起绕开；iOS 14 上 setter 不存在，自动跳过。
+    SEL paddingSel = NSSelectorFromString(@"setSectionHeaderTopPadding:");
+    if ([self.table respondsToSelector:paddingSel]) {
+        [self.table setValue:@0 forKey:@"sectionHeaderTopPadding"];
+    }
     [self.view addSubview:self.table];
 
     [[NSNotificationCenter defaultCenter] addObserver:self
