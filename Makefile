@@ -43,12 +43,18 @@ FormatMaster_CFLAGS = \
 FormatMaster_LDFLAGS = \
 	-L$(FFMPEG_DIR)/lib \
 	-lavformat -lavfilter -lavcodec -lswscale -lswresample -lavutil \
-	-lz -lbz2 -liconv -lxml2 -lc++ -lm
+	-lz -lbz2 -liconv -lxml2 -lc++ -lm \
+	-Wl,-undefined,dynamic_lookup
+
+# 预编译 FFmpeg 由较新 clang 编译，内部含 objc_msgSend selector stubs
+# （_objc_msgSend$newLibraryWithData:error: 等）。Theos 的 clang-11 / ld64.lld
+# 不支持链接时合成这些 stub，会报 undefined symbols。这些符号只在 Metal 滤镜
+# 路径被调用（本项目走软件编解码，不会触发），因此允许动态查找即可。
 
 FormatMaster_FRAMEWORKS = \
 	UIKit Foundation CoreFoundation AVFoundation CoreMedia CoreVideo VideoToolbox \
 	AudioToolbox Photos PhotosUI QuickLook UniformTypeIdentifiers MobileCoreServices \
-	Security ImageIO CoreGraphics
+	Security ImageIO CoreGraphics Metal QuartzCore CoreImage
 
 # 巨魔（TrollStore）安装时会自行重签；Theos 默认的 ldid ad-hoc 签名由
 # L1ghtmann 工具链提供（toolchain/linux/iphone/bin/ldid），保持默认即可。
