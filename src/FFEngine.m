@@ -18,6 +18,8 @@ extern "C" {
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
+#include <libavutil/pixfmt.h>
+#include <libavutil/samplefmt.h>
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/channel_layout.h>
@@ -141,7 +143,7 @@ static NSString *avErrToStr(int err) {
             d[@"width"] = @(par->width);
             d[@"height"] = @(par->height);
             if (st->avg_frame_rate.num > 0) d[@"fps"] = @(av_q2d(st->avg_frame_rate));
-            const char *pf = av_get_pix_fmt_name((AVPixelFormat)par->format);
+            const char *pf = av_get_pix_fmt_name((enum AVPixelFormat)par->format);
             d[@"pix_fmt"] = [NSString stringWithUTF8String:pf ?: "unknown"];
         } else if (par->codec_type == AVMEDIA_TYPE_AUDIO) {
             d[@"sample_rate"] = @(par->sample_rate);
@@ -150,12 +152,12 @@ static NSString *avErrToStr(int err) {
 #else
             d[@"channels"] = @(par->channels);
 #endif
-            const char *sf = av_get_sample_fmt_name((AVSampleFormat)par->format);
+            const char *sf = av_get_sample_fmt_name((enum AVSampleFormat)par->format);
             d[@"fmt"] = [NSString stringWithUTF8String:sf ?: "unknown"];
         }
         if (st->duration > 0 && st->time_base.den > 0)
             d[@"duration"] = @(av_q2d(st->time_base) * (double)st->duration);
-        if (st->bit_rate > 0) d[@"bit_rate"] = @(st->bit_rate);
+        if (par->bit_rate > 0) d[@"bit_rate"] = @(par->bit_rate);
         [streams addObject:d];
     }
 
@@ -396,8 +398,12 @@ static BOOL prepare_video_track(AVFormatContext *in, AVFormatContext *out, FFTra
         if (err) *err = FErr(51, @"创建解码上下文失败"); return NO; }
     t->dec->thread_count = 2;
     if (avcodec_open2(t->dec, dc, NULL) < 0) {
-        if (err) *err = FErr(52, [NSString stringWithFormat:@"打开解码器失败：%@",
-                                  [NSString stringWithUTF8String:dc->name]]); return NO; }
+        if (err) {
+            *err = FErr(52, [NSString stringWithFormat:@"打开解码器失败：%@",
+                             [NSString stringWithUTF8String:dc->name]]);
+        }
+        return NO;
+    }
 
     if (t->copy) {
         t->outStream = avformat_new_stream(out, NULL);
@@ -652,7 +658,8 @@ static int flush_all(FFTrack *t, AVFormatContext *in, AVFormatContext *out,
         BOOL done = NO;
         if (pump_decoder(t, in, out, req, st, &done, err) == -2) return -2;
         // 滤镜 flush
-        av_buffersrc_add_frame_flags(t->src, NULL, 0);
+        int flush_ret = av_buffersrc_add_frame_flags(t->src, NULL, 0);
+        (void)flush_ret;
         if (drain_filter_encode(t, out, st, err) == -2) return -2;
         // 编码器 flush
         if (encode_and_write(t, out, NULL, err) < 0) return -1;
