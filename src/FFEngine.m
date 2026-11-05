@@ -8,6 +8,7 @@
 // 兼容 FFmpeg 4/5/6：channel layout 新旧 API 用版本宏分支。
 #import "FFEngine.h"
 #import <inttypes.h>
+#import <math.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +23,7 @@ extern "C" {
 #include <libavutil/channel_layout.h>
 #include <libavutil/mathematics.h>
 #include <libavutil/version.h>
-#include <libavutil/utils.h>
+#include <libavutil/avutil.h>
 #include <libavutil/dict.h>
 #ifdef __cplusplus
 }
@@ -460,7 +461,8 @@ static BOOL prepare_video_track(AVFormatContext *in, AVFormatContext *out, FFTra
         t->enc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     // 滤镜图（fps 决定 CFR；最终 format 与编码器 pix_fmt 对齐）
-    NSString *finalFmt = av_get_pix_fmt_name(t->enc->pix_fmt) ?: "yuv420p";
+    NSString *finalFmt = [NSString stringWithUTF8String:
+                          av_get_pix_fmt_name(t->enc->pix_fmt) ?: "yuv420p"];
     NSString *args = video_src_args(t->dec, ist->time_base, fps);
     NSString *chain = video_chain(req, st->gif, finalFmt);
     if (build_graph(t, YES, args, chain, err) < 0) return NO;

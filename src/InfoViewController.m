@@ -71,10 +71,11 @@
 - (NSString *)render:(NSDictionary *)info path:(NSString *)path {
     NSMutableString *o = [NSMutableString string];
     [o appendFormat:@"文件：%@\n", path.lastPathComponent];
-    long long sz = (long long)[NSFileManager.defaultManager
-        attributesOfItemAtPath:path error:nil][NSFileSize];
-    [o appendFormat:@"大小：%@\n", [NSByteCountFormatter stringFromCount:sz
-                                                                   usage:NSByteCountFormatterUseDefault]];
+    long long sz = [[NSFileManager.defaultManager
+        attributesOfItemAtPath:path error:nil][NSFileSize] longLongValue];
+    [o appendFormat:@"大小：%@\n",
+        [NSByteCountFormatter stringFromByteCount:sz
+                                       countStyle:NSByteCountFormatterCountStyleFile]];
     [o appendFormat:@"容器：%@\n", info[@"format_name"]];
     double dur = [info[@"duration"] doubleValue];
     [o appendFormat:@"时长：%@\n", dur > 0 ? [NSString stringWithFormat:@"%.2f 秒", dur] : @"未知"];

@@ -16,17 +16,15 @@ WORK="${OUT_DIR}/ipa"
 mkdir -p "${OUT_DIR}"
 
 # ---- 1. 找到 Theos 产出的 .app 或裸二进制 -----------------------------------
-APP_BUNDLE="$(find "${ROOT}/.theos" -type d -name "${APP_NAME}.app" 2>/dev/null | head -n1 || true)"
-
-if [ -n "${APP_BUNDLE}" ] && find "${APP_BUNDLE}" -maxdepth 1 -type f | grep -q .; then
-  echo "==> 使用 Theos 产物：${APP_BUNDLE}"
-else
-  APP_BUNDLE=""
-fi
+# 不同 Theos 版本产物目录不同：.theos/obj/、obj/、.theos/_/ 都出现过，
+# 所以直接在工程根下递归搜，排除 build/ 里上一次打包留下的 Payload。
+APP_BUNDLE="$(find "${ROOT}" -type d -name "${APP_NAME}.app" \
+              -not -path "${OUT_DIR}/*" 2>/dev/null | head -n1 || true)"
 
 # 优先找带 Mach-O 魔数的可执行文件（Theos 在 Linux 上可能命名带前缀下划线）
 find_macho() {
   local dir="$1" f
+  [ -d "${dir}" ] || return 1
   while IFS= read -r f; do
     # Mach-O 小端 64 位魔数 0xfeedfacf
     if command -v xxd >/dev/null 2>&1; then
@@ -34,21 +32,29 @@ find_macho() {
     else
       if od -An -tx1 -N4 "$f" 2>/dev/null | tr -d ' \n' | grep -qi 'cffaedfe'; then echo "$f"; return 0; fi
     fi
-  done < <(find "${dir}" -maxdepth 3 -type f \( -name "${APP_NAME}" -o -name "_${APP_NAME}" \) 2>/dev/null)
+  done < <(find "${dir}" -type f \( -name "${APP_NAME}" -o -name "_${APP_NAME}" \) 2>/dev/null)
   return 1
 }
 
 BIN=""
 if [ -n "${APP_BUNDLE}" ]; then
+  echo "==> 使用 Theos 产物：${APP_BUNDLE}"
   BIN="$(find_macho "${APP_BUNDLE}" || true)"
+  # .app 里主程序名可能就是 CFBundleExecutable，魔数匹配失败时退而求其次
+  if [ -z "${BIN}" ] && [ -f "${APP_BUNDLE}/${APP_NAME}" ]; then
+    BIN="${APP_BUNDLE}/${APP_NAME}"
+  fi
 fi
 if [ -z "${BIN}" ]; then
-  # 回退：从 obj 目录里找编译出来的主程序，手工拼 bundle
-  BIN="$(find_macho "${ROOT}/.theos/obj" || true)"
+  # 回退：从各候选 obj 目录里找编译出来的主程序，手工拼 bundle
+  for d in "${ROOT}/.theos/obj" "${ROOT}/.theos" "${ROOT}/obj" "${ROOT}/build"; do
+    BIN="$(find_macho "${d}" || true)"
+    [ -n "${BIN}" ] && break
+  done
 fi
 if [ -z "${BIN}" ]; then
-  echo "!! 没找到 ${APP_NAME} 的 Mach-O 产物。请先执行 make，并检查 .theos 目录：" >&2
-  find "${ROOT}/.theos" -maxdepth 3 2>/dev/null | head -n 40 >&2 || true
+  echo "!! 没找到 ${APP_NAME} 的 Mach-O 产物。请先执行 make，并检查产物目录：" >&2
+  find "${ROOT}" -maxdepth 4 2>/dev/null | head -n 60 >&2 || true
   exit 1
 fi
 echo "==> 主程序：${BIN}"

@@ -45,12 +45,22 @@ for lib in "${LIBS[@]}"; do
   headers="$(find "${slice}" -maxdepth 3 -type d -name Headers | head -n1 || true)"
   if [ -n "${headers}" ]; then
     # FFmpeg 内部一律写 #include <libavcodec/avcodec.h>，
-    # 所以头文件目录必须命名为 lib<name>，不能是 <name>。
-    mkdir -p "${OUT}/include/lib${lib}"
-    if find "${headers}" -maxdepth 1 -name '*.h' | grep -q .; then
-      cp "${headers}"/*.h "${OUT}/include/lib${lib}/"
-    else
-      cp -R "${headers}/." "${OUT}/include/lib${lib}/"
+    # 所以最终必须是 include/lib<name>/xxx.h。
+    # XCFramework 的 Headers 下通常是 lib<name>/ 子目录；旧包也可能是扁平 .h，
+    # 两种结构都要兼容，否则会变成 include/lib<name>/lib<name>/xxx.h 而找不到头文件。
+    mkdir -p "${OUT}/include"
+    cp -R "${headers}/." "${OUT}/include/"
+    if [ -d "${OUT}/include/${lib}" ] && [ ! -d "${OUT}/include/lib${lib}" ]; then
+      mv "${OUT}/include/${lib}" "${OUT}/include/lib${lib}"
+    fi
+    if find "${OUT}/include" -maxdepth 1 -name '*.h' | grep -q .; then
+      mkdir -p "${OUT}/include/lib${lib}"
+      find "${OUT}/include" -maxdepth 1 -name '*.h' -exec mv -t "${OUT}/include/lib${lib}/" {} +
+    fi
+    if [ ! -f "${OUT}/include/lib${lib}/${lib}.h" ]; then
+      echo "!! ${lib} 头文件结构异常，请检查 ${OUT}/include：" >&2
+      find "${OUT}/include" -maxdepth 2 | head -n 40 >&2
+      exit 1
     fi
   else
     echo "!! ${lib} 切片里没有 Headers 目录" >&2

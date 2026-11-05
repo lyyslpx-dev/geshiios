@@ -84,10 +84,10 @@ static NSMutableArray<FMInputPicker *> *_FMPickerKeepalive = nil;
     NSItemProvider *provider = results.firstObject.itemProvider;
     NSString *type = nil;
     for (NSString *tid in provider.registeredTypeIdentifiers) {
-        if ([tid isEqualToString:(NSString *)kUTTypeMovie] ||
-            [tid isEqualToString:(NSString *)kUTTypeMPEG4] ||
+        if ([tid isEqualToString:(__bridge NSString *)kUTTypeMovie] ||
+            [tid isEqualToString:(__bridge NSString *)kUTTypeMPEG4] ||
             [tid isEqualToString:@"public.mpeg-2-transport-stream"] ||
-            [tid isEqualToString:(NSString *)kUTTypeImage] ||
+            [tid isEqualToString:(__bridge NSString *)kUTTypeImage] ||
             [tid isEqualToString:@"public.heic"] ||
             [tid isEqualToString:@"public.audio"]) { type = tid; break; }
     }
@@ -138,25 +138,18 @@ static NSMutableArray<FMInputPicker *> *_FMPickerKeepalive = nil;
 // ---- 「文件」App -----------------------------------------------------------
 
 - (void)openFiles:(FFFormatKind)kind {
-    NSArray<UTType *> *types;
+    (void)kind;
+    NSArray *types = @[];
     if (@available(iOS 14.0, *)) {
-        switch (kind) {
-            case FFFormatKindImage: types = @[UTType.image]; break;
-            case FFFormatKindAudio: types = @[UTType.audio]; break;
-            default: types = @[UTType.movie, UTType.audio, UTType.image,
-                               [UTType typeWithIdentifier:@"public.avi" conformingTo:UTType.data] ?: UTType.data]; break;
-        }
-        // 全格式诉求：放宽到 public.data + 三类媒体，避免 MKV/FLV 被灰掉选不中
+        // 全格式诉求：放宽到 public.data，避免 MKV/FLV/AVI 等被灰掉选不中
         types = @[UTType.data];
-    } else {
-        types = @[];
     }
     UIDocumentPickerViewController *dp;
     if (@available(iOS 14.0, *)) {
         dp = [[UIDocumentPickerViewController alloc] initWithContentTypes:types asCopy:YES];
     } else {
         dp = [[UIDocumentPickerViewController alloc]
-              initWithDocumentTypes:@[(NSString *)kUTTypeData] inMode:UIDocumentPickerModeImport];
+              initWithDocumentTypes:@[(__bridge NSString *)kUTTypeData] inMode:UIDocumentPickerModeImport];
     }
     dp.delegate = self;
     dp.allowsMultipleSelection = NO;

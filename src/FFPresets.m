@@ -59,8 +59,6 @@ static FFPreset *P(NSString *title, NSString *ext, NSString *muxer, FFFormatKind
     return @[];
 }
 
-static NSString *mov3gp(void) { return @"mov"; }
-
 + (FFFormatKind)kindOfPath:(NSString *)path {
     static NSSet *video, *audio, *image;
     static dispatch_once_t once;

@@ -153,7 +153,7 @@
             [ms appendFormat:@"时长 %@ 秒", dur > 0 ? [NSString stringWithFormat:@"%.1f", dur] : @"未知"];
             for (NSDictionary *st in info[@"streams"]) {
                 if ([st[@"type"] isEqualToString:@"视频"]) {
-                    [ms appendFormat:@"｜%@$x%@ @%.0ffps", st[@"codec"], st[@"width"], st[@"height"],
+                    [ms appendFormat:@"｜%@ %@x%@ @%.0ffps", st[@"codec"], st[@"width"], st[@"height"],
                      [st[@"fps"] doubleValue]];
                 } else if ([st[@"type"] isEqualToString:@"音频"]) {
                     [ms appendFormat:@"｜音频 %@ %dHz", st[@"codec"], [st[@"sample_rate"] intValue]];
@@ -342,8 +342,8 @@
             });
             return YES;
         } error:&e];
-        long long size = ok ? (long long)[NSFileManager.defaultManager
-                    attributesOfItemAtPath:self.outputPath error:nil][NSFileSize] : 0;
+        long long size = ok ? [[NSFileManager.defaultManager
+                    attributesOfItemAtPath:self.outputPath error:nil][NSFileSize] longLongValue] : 0;
         dispatch_async(dispatch_get_main_queue(), ^{
             typeof(self) s = ws;
             if (!s) return;
@@ -355,7 +355,8 @@
                 s.progress.progress = 1;
                 s.statusLabel.text = [NSString stringWithFormat:@"完成：%@（%@）",
                     s.outputPath.lastPathComponent,
-                    [NSByteCountFormatter stringFromCount:size usage:NSByteCountFormatterUseDefault]];
+                    [NSByteCountFormatter stringFromByteCount:size
+                        countStyle:NSByteCountFormatterCountStyleFile]];
                 s.saveBtn.hidden = NO;
                 s.shareBtn.hidden = NO;
             } else {

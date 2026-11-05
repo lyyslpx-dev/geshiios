@@ -36,20 +36,21 @@ FormatMaster_CFLAGS = \
 	-I$(CURDIR)/src \
 	-I$(FFMPEG_DIR)/include
 
-# 链接顺序：被依赖的库在后（avutil 最末）
-# 若链接报 bzip2 相关未定义符号，说明所选 FFmpeg 构建启用了 --enable-bz2，
-# 届时补上 -lbz2 并安装提供 libbz2 的 SDK 依赖即可。
+# 链接顺序：被依赖的库在后（avutil 最末，其后才是系统库）
+# FFmpeg 静态库常见的外部依赖：zlib/bzlib/iconv/libxml2，以及 VideoToolbox
+# 相关代码需要的 libc++。这些都是 iOS SDK 自带的 tbd，缺一个就会在链接期
+# 报 "Undefined symbols for architecture arm64"。
 FormatMaster_LDFLAGS = \
 	-L$(FFMPEG_DIR)/lib \
 	-lavformat -lavfilter -lavcodec -lswscale -lswresample -lavutil \
-	-lz -lm
+	-lz -lbz2 -liconv -lxml2 -lc++ -lm
 
 FormatMaster_FRAMEWORKS = \
-	UIKit Foundation AVFoundation CoreMedia CoreVideo VideoToolbox \
-	Photos PhotosUI QuickLook UniformTypeIdentifiers MobileCoreServices \
+	UIKit Foundation CoreFoundation AVFoundation CoreMedia CoreVideo VideoToolbox \
+	AudioToolbox Photos PhotosUI QuickLook UniformTypeIdentifiers MobileCoreServices \
 	Security ImageIO CoreGraphics
 
-# 巨魔（TrollStore）自己完成签名，这里不需要 Theos 调用 codesign/ldid
-FORMATMASTER_SIGNATURE =
+# 巨魔（TrollStore）安装时会自行重签；Theos 默认的 ldid ad-hoc 签名由
+# L1ghtmann 工具链提供（toolchain/linux/iphone/bin/ldid），保持默认即可。
 
 include $(THEOS_MAKE_PATH)/application.mk

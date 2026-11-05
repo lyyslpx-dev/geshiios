@@ -280,8 +280,8 @@
             });
             return YES;
         } error:&e];
-        long long size = ok ? (long long)[NSFileManager.defaultManager
-                    attributesOfItemAtPath:self.outputPath error:nil][NSFileSize] : 0;
+        long long size = ok ? [[NSFileManager.defaultManager
+                    attributesOfItemAtPath:self.outputPath error:nil][NSFileSize] longLongValue] : 0;
         dispatch_async(dispatch_get_main_queue(), ^{
             typeof(self) s = ws;
             if (!s) return;
@@ -293,7 +293,8 @@
                 s.progress.progress = 1;
                 s.statusLabel.text = [NSString stringWithFormat:@"完成： %@（%@）",
                     s.outputPath.lastPathComponent,
-                    [NSByteCountFormatter stringFromCount:size usage:NSByteCountFormatterUseDefault]];
+                    [NSByteCountFormatter stringFromByteCount:size
+                        countStyle:NSByteCountFormatterCountStyleFile]];
                 s.saveBtn.hidden = ([FFPresets kindOfPath:s.outputPath] == FFFormatKindAudio);
                 s.shareBtn.hidden = NO;
             } else {
