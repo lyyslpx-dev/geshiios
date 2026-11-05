@@ -59,7 +59,9 @@ jobs:
             tail -n 400 build/make.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          msg="$(grep -nE 'error:|fatal error|undefined reference|Undefined symbols|No such file|framework not found|library not found|make.*\*\*\*|Stop\.|not found for architecture' build/make.log | head -n 45 | awk '{printf "%s%%0A", $0}')"
+          block="$(sed -n '/Undefined symbols for architecture/,/symbol(s) not found/p' build/make.log | head -n 90)"
+          errs="$(grep -nE 'error:|fatal error|undefined reference|No such file|framework not found|library not found|make.*\*\*\*|Stop\.' build/make.log | head -n 25)"
+          msg="$(printf '%s\n%s' "$block" "$errs" | head -n 100 | awk '{printf "%s%%0A", $0}')"
           if [ -n "$msg" ]; then
             echo "::error::${msg}"
           else
