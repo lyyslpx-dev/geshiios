@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   ipa:
     runs-on: ubuntu-22.04
@@ -22,15 +25,46 @@ jobs:
           sudo apt-get install -y build-essential fakeroot rsync curl perl zip unzip git libxml2 libtinfo6 xz-utils
 
       - name: 安装 Theos 与 iOS 工具链
+        env:
+          # install-sdk 会请求 api.github.com 查询 theos/sdks 的最新 release。
+          # 不带 token 时 runner 共享 IP 容易被限流，返回内容里没有 download_url，
+          # install-theos 会以 exit code 8（SDK 安装失败）中断整个流水线。
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
           echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          echo "$HOME/theos/bin" >> "$GITHUB_PATH"
 
       - name: 抓 FFmpeg iOS 静态库
         run: bash scripts/fetch-ffmpeg.sh
 
       - name: 编译
-        run: make FINAL=1 -j"$(nproc)"
+        run: |
+          mkdir -p build
+          set -o pipefail
+          make FINAL=1 -j"$(nproc)" 2>&1 | tee build/make.log
+
+      # 编译失败时把关键错误行写进 check-run annotations。
+      # annotations 走公开 API 就能读到，无需管理员权限下载完整日志。
+      - name: 输出编译错误摘要
+        if: failure()
+        run: |
+          if [ ! -f build/make.log ]; then
+            echo "::error::编译日志不存在，失败发生在 make 之前"
+            exit 0
+          fi
+          {
+            echo '### 编译日志（末尾 400 行）'
+            echo '```'
+            tail -n 400 build/make.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          msg="$(grep -nE 'error:|fatal error|undefined reference|Undefined symbols|No such file|framework not found|library not found|make.*\*\*\*|Stop\.|not found for architecture' build/make.log | head -n 45 | awk '{printf "%s%%0A", $0}')"
+          if [ -n "$msg" ]; then
+            echo "::error::${msg}"
+          else
+            echo "::error::编译失败但未匹配到标准错误行，请查看 Job Summary 中的完整日志"
+          fi
 
       - name: 打包 ipa
         run: bash scripts/make-ipa.sh
